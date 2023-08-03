@@ -1,24 +1,43 @@
-import logo from './logo.svg';
-import './App.css';
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import SuperAdmin from "./components/SuperAdmin";
+import Protected from "./Protected";
+import { useState } from "react";
+import Dashboard from "./components/SuperAdmin/Dashboard";
+import Department from "./components/SuperAdmin/Department";
+import Roles from "./components/SuperAdmin/Roles";
+import Courses from "./components/SuperAdmin/Courses";
+import Users from "./components/SuperAdmin/Users";
+import Settings from "./components/SuperAdmin/Settings";
 
 function App() {
+  const [isSignedIn, setIsSignedIn] = useState(true);
+  const signin = () => {
+    setIsSignedIn(true);
+  };
+  const signout = () => {
+    setIsSignedIn(false);
+  };
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
+    <Router basename="/superadmin">
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <Protected isSignedIn={isSignedIn}>
+              <SuperAdmin signout={signout} />
+            </Protected>
+          }
         >
-          Learn React
-        </a>
-      </header>
-    </div>
+          <Route path="/" element={<Dashboard />}></Route>
+          <Route path="/department" element={<Department />}></Route>
+          <Route path="/roles" element={<Roles />}></Route>
+          <Route path="/courses" element={<Courses />}></Route>
+          <Route path="/users" element={<Users />}></Route>
+          <Route path="/settings" element={<Settings />}></Route>
+        </Route>
+      </Routes>
+    </Router>
   );
 }
 
