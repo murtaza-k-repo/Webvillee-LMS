@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import Table from "@material-ui/core/Table";
 import TableBody from "@material-ui/core/TableBody";
@@ -14,6 +14,7 @@ import { MdDelete } from "react-icons/md";
 import { Button, Form, Modal } from "react-bootstrap";
 import { FaPlus } from "react-icons/fa";
 import "./style.css";
+import axios from "axios";
 
 const useStyles = makeStyles({
   table: {
@@ -21,35 +22,41 @@ const useStyles = makeStyles({
   },
 });
 
-const originalRows = [
-  {
-    sno: 1,
-    name: "Development",
-  },
-  {
-    sno: 2,
-    name: "Animation",
-  },
-  {
-    sno: 3,
-    name: "Salesforce",
-  },
-];
+
 
 const Department = () => {
-  const [rows, setRows] = useState(originalRows);
+  const [rows, setRows] = useState([]);
   const [show, setShow] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updateValue, setUpdateValue] = useState("");
   const [searched, setSearched] = useState("");
   const classes = useStyles();
 
-  const requestSearch = (searchedVal) => {
-    const filteredRows = originalRows.filter((row) => {
-      return row.name.toLowerCase().includes(searchedVal.toLowerCase());
+  const getAllDepartments = async () => {
+    const response = await axios.get(`${process.env.REACT_APP_API_ENDPOINT}/getAllDepartments`, {
+      headers: {
+        "Authorization": `Bearer ${localStorage.getItem("authToken")}`
+      }
     });
-    setRows(filteredRows);
+
+    if(response.status === 200) {
+      setRows(response.data.data);
+    }else{
+      alert("Something went wrong!");
+    }
+  }
+
+  const requestSearch = (searchedVal) => {
+
+    const filteredRows = rows.filter((row) => {
+      return row.department_name.toLowerCase().includes(searchedVal.toLowerCase());
+    });
+
+
+      setRows(filteredRows);
+   
   };
+ 
 
   const cancelSearch = () => {
     setSearched("");
@@ -67,6 +74,11 @@ const Department = () => {
     setShowUpdateModal(false);
     console.log(event.target[0].value);
   };
+
+  useEffect(() => {
+    getAllDepartments();
+    console.log(rows)
+  }, [])
 
   return (
     <>
@@ -97,18 +109,18 @@ const Department = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {rows.map((row) => (
-                <TableRow key={row.sno}>
+              {rows && rows.map((row, index) => (
+                <TableRow key={index+1}>
                   <TableCell component="th" scope="row">
-                    {row.sno}
+                    {index+1}
                   </TableCell>
-                  <TableCell>{row.name}</TableCell>
+                  <TableCell>{row.department_name}</TableCell>
                   <TableCell>
                     <>
                       <Button
                         className="text-success"
                         variant="outlined"
-                        onClick={() => { setShowUpdateModal(true); setUpdateValue(row.name); }}
+                        onClick={() => { setShowUpdateModal(true); setUpdateValue(row.department_name); }}
                       >
                         <BiSolidPencil size={22} />
                       </Button>
@@ -164,6 +176,7 @@ const Department = () => {
                 id="department"
                 aria-describedby="department"
                 placeholder="Enter department"
+                onChange={(e) => setUpdateValue(e.target.value)}
                 value={updateValue}
               />
             </div>

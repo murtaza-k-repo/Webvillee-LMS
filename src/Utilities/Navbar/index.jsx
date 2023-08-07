@@ -4,6 +4,7 @@ import logo from "../../assets/img/WebvilleeLogo.png";
 import { Link } from 'react-router-dom';
 
 const LMSNavbar = (props) => {
+  
   return (
     <Navbar className="bg-body-tertiary">
         <Container>
@@ -17,7 +18,7 @@ const LMSNavbar = (props) => {
             />{' '}
             &nbsp; Webvillee LMS
           </Navbar.Brand>
-          <div><Link to={"/"} onClick={props.signout} className='text-decoration-none text-black'>Logout</Link></div>
+          <div><Link to={"/login"} onClick={() => { props.signout(); localStorage.clear();}} className='text-decoration-none text-black'>Logout</Link></div>
         </Container>
       </Navbar>
   )

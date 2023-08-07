@@ -4,10 +4,10 @@ import LMSNavbar from "../../Utilities/Navbar";
 import { Outlet } from "react-router";
 
 
-const SuperAdmin = () => {
+const SuperAdmin = (props) => {
   return (
     <>
-      <LMSNavbar />
+      <LMSNavbar {...props}/>
 
       <div className="">
         <div className="row me-0">
