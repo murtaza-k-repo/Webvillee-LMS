@@ -11,6 +11,8 @@ import Settings from "./components/SuperAdmin/Settings";
 
 function App() {
   const [isSignedIn, setIsSignedIn] = useState(true);
+
+  //eslint-disable-next-line
   const signin = () => {
     setIsSignedIn(true);
   };

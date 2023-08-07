@@ -8,6 +8,12 @@ import { Link } from "react-router-dom";
 
 const Dashboard = () => {
   const [quote, setQuote] = useState("");
+  const [counts, setCounts] = useState({
+    departments: 0,
+    roles: 0,
+    courses: 0,
+    users: 0
+  });
 
   const getQuote = async () => {
     try {
@@ -15,7 +21,7 @@ const Dashboard = () => {
         "https://api.api-ninjas.com/v1/quotes?category=inspirational",
         {
           headers: {
-            "X-Api-Key": "ZoQoyoFW+bDqoobsRJHY4A==36B4D6SVn1X9CYlG",
+            "X-Api-Key": process.env.REACT_APP_QUOTE_API_KEY,
           },
         }
       );
@@ -28,8 +34,25 @@ const Dashboard = () => {
     }
   };
 
+  const getAllDepartments = async () => {
+      try{
+        let response = await axios.get(`${process.env.REACT_APP_API_ENDPOINT}/getAllDepartments`, {
+          headers: {
+            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjRiZmExZjEzODIwY2UyZTIyNzc4YjNiIiwidXNlcl9lbXBpZCI6Ind2MTAwMiIsInVzZXJfZW1haWwiOiJhcnVuQG1vdGlvbnZpbGxlZS5jb20iLCJ1c2VyX3JvbGUiOiJTdXBlckFkbWluIiwidXNlcl9uYW1lIjoiYXJ1biBhY2hhcnlhIiwiaWF0IjoxNjkxMTM3MjkwLCJleHAiOjE2OTExNTUyOTB9.3K3raXiveRmkHDHAJGCVUpltV-W6Y8bg5EQ4VyVIBjA`
+          }
+        });
+        if(response.sucess){
+          setCounts({...counts, departments: response.data.length});
+        }
+      }catch(err){
+        console.log("Something went wrong!");
+      }
+  }
+
   useEffect(() => {
     getQuote();
+    getAllDepartments();
+    //eslint-disable-next-line
   }, []);
 
   return (
@@ -63,7 +86,7 @@ const Dashboard = () => {
               {" "}
               <div className="text-center">
                 <p>Department</p>
-                <p>0</p>
+                <p>{counts.departments}</p>
               </div>{" "}
             </Card.Body>
           </Card>
@@ -76,7 +99,7 @@ const Dashboard = () => {
               {" "}
               <div className="text-center" style={{fontWeight: "700", fontSize: "18px"}}>
                 <p>Roles</p>
-                <p>0</p>
+                <p>{counts.roles}</p>
               </div>{" "}
             </Card.Body>
           </Card>
@@ -89,7 +112,7 @@ const Dashboard = () => {
               {" "}
               <div className="text-center" style={{fontWeight: "700", fontSize: "18px"}}>
                 <p>Courses</p>
-                <p>0</p>
+                <p>{counts.courses}</p>
               </div>{" "}
             </Card.Body>
           </Card>
@@ -102,7 +125,7 @@ const Dashboard = () => {
               {" "}
               <div className="text-center" style={{fontWeight: "700", fontSize: "18px"}}>
                 <p>Users</p>
-                <p>0</p>
+                <p>{counts.users}</p>
               </div>{" "}
             </Card.Body>
           </Card>
