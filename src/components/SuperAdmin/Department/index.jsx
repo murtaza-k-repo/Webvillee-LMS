@@ -8,10 +8,12 @@ import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
 import Paper from "@material-ui/core/Paper";
 import SearchBar from "material-ui-search-bar";
+import { toast, ToastContainer } from 'react-toastify';
+import "react-toastify/dist/ReactToastify.css";
 
 import { BiSolidPencil } from "react-icons/bi";
 import { MdDelete } from "react-icons/md";
-import { Button, Form, Modal } from "react-bootstrap";
+import { Button, Form, Modal, Spinner } from "react-bootstrap";
 import { FaPlus } from "react-icons/fa";
 import "./style.css";
 import axios from "axios";
@@ -22,66 +24,135 @@ const useStyles = makeStyles({
   },
 });
 
-
-
 const Department = () => {
-  const [rows, setRows] = useState([]);
+  const [rows, setRows] = useState(null);
+  const [filteredRows, setFilteredRows] = useState(null);
   const [show, setShow] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
-  const [updateValue, setUpdateValue] = useState("");
+  const [updateData, setUpdateData] = useState({id: "", value:""});
   const [searched, setSearched] = useState("");
   const classes = useStyles();
 
   const getAllDepartments = async () => {
-    const response = await axios.get(`${process.env.REACT_APP_API_ENDPOINT}/getAllDepartments`, {
-      headers: {
-        "Authorization": `Bearer ${localStorage.getItem("authToken")}`
-      }
-    });
+    try {
+      setIsLoading(true);
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_ENDPOINT}/getAllDepartments`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        }
+      );
 
-    if(response.status === 200) {
-      setRows(response.data.data);
-    }else{
-      alert("Something went wrong!");
+      if (response.status === 200) {
+        setRows(response.data.data);
+        setFilteredRows(response.data.data);
+        setIsLoading(false);
+      } else {
+        toast.error("Something went wrong!", {
+            position: toast.POSITION.TOP_RIGHT
+          });
+        setIsLoading(false);
+      }
+    } catch (err) {
+      console.log(err);
+      toast.error("Something went wrong!", {
+        position: toast.POSITION.TOP_RIGHT
+      });
+      setIsLoading(false);
     }
-  }
+  };
 
   const requestSearch = (searchedVal) => {
+    if (searchedVal) {
+      const filteredRowsData = rows.filter((row) => {
+        return row.department_name
+          .toLowerCase()
+          .includes(searchedVal.toLowerCase());
+      });
 
-    const filteredRows = rows.filter((row) => {
-      return row.department_name.toLowerCase().includes(searchedVal.toLowerCase());
-    });
-
-
-      setRows(filteredRows);
-   
+      setFilteredRows(filteredRowsData);
+    } else {
+      setFilteredRows(rows);
+    }
   };
- 
 
   const cancelSearch = () => {
     setSearched("");
     requestSearch(searched);
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    setShow(false);
-    console.log(event.target[0].value);
+
+    try{
+        let response = await axios.post(`${process.env.REACT_APP_API_ENDPOINT}/createDepartment`, {
+            department_name: event.target[0].value
+        },{
+            headers: {
+                "Authorization": `Bearer ${localStorage.getItem("authToken")}`
+            }
+        });
+
+        if(response.status === 200){
+            setShow(false);
+            getAllDepartments();
+            toast.success("Department added successfully!", {
+                position: toast.POSITION.TOP_RIGHT
+              });
+        } else{
+            toast.error("Something went wrong!", {
+                position: toast.POSITION.TOP_RIGHT
+              });
+        }
+    }catch(err){
+        toast.error("Something went wrong!", {
+            position: toast.POSITION.TOP_RIGHT
+          });
+    }
   };
 
-  const handleUpdate = (event) => {
+  const handleUpdate = async (event) => {
     event.preventDefault();
-    setShowUpdateModal(false);
-    console.log(event.target[0].value);
+    
+    try{
+        let response = await axios.put(`${process.env.REACT_APP_API_ENDPOINT}/updateDepartment/${updateData.id}`, {
+            department_name: updateData.value
+        },{
+            headers: {
+                "Authorization": `Bearer ${localStorage.getItem("authToken")}`
+            }
+        });
+
+        if(response.status === 200){
+            setShowUpdateModal(false);
+            getAllDepartments();
+            toast.success("Department updated successfully!", {
+                position: toast.POSITION.TOP_RIGHT
+              });
+        } else{
+            toast.error("Something went wrong!", {
+                position: toast.POSITION.TOP_RIGHT
+              });
+        }
+    }catch(err){
+        toast.error("Something went wrong!", {
+            position: toast.POSITION.TOP_RIGHT
+          });
+    }
   };
 
   useEffect(() => {
     getAllDepartments();
-    console.log(rows)
-  }, [])
+
+    //eslint-disable-next-line
+  }, []);
 
   return (
     <>
+      <ToastContainer />
       <Paper className="mt-4">
         <div className="d-flex">
           <SearchBar
@@ -89,6 +160,7 @@ const Department = () => {
             onChange={(searchVal) => requestSearch(searchVal)}
             onCancelSearch={() => cancelSearch()}
             style={{ width: "80%" }}
+            disabled={isLoading}
           />
           <Button
             className={"addBtn"}
@@ -109,28 +181,57 @@ const Department = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {rows && rows.map((row, index) => (
-                <TableRow key={index+1}>
-                  <TableCell component="th" scope="row">
-                    {index+1}
-                  </TableCell>
-                  <TableCell>{row.department_name}</TableCell>
+              {filteredRows &&
+                filteredRows.map((row, index) => (
+                  <TableRow key={index + 1}>
+                    <TableCell component="th" scope="row">
+                      {index + 1}
+                    </TableCell>
+                    <TableCell>{row.department_name}</TableCell>
+                    <TableCell>
+                      <>
+                        <Button
+                          className="text-success"
+                          variant="outlined"
+                          onClick={() => {
+                            setShowUpdateModal(true);
+                            setUpdateData({id: row._id, value:row.department_name});
+                          }}
+                        >
+                          <BiSolidPencil size={22} />
+                        </Button>
+                        <Button className="text-danger" variant="outlined">
+                          <MdDelete size={22} />
+                        </Button>
+                      </>
+                    </TableCell>
+                  </TableRow>
+                ))}
+
+              {isLoading && !filteredRows && (
+                <>
+                  <TableCell></TableCell>
                   <TableCell>
-                    <>
-                      <Button
-                        className="text-success"
-                        variant="outlined"
-                        onClick={() => { setShowUpdateModal(true); setUpdateValue(row.department_name); }}
-                      >
-                        <BiSolidPencil size={22} />
-                      </Button>
-                      <Button className="text-danger" variant="outlined">
-                        <MdDelete size={22} />
-                      </Button>
-                    </>
+                    <div className="d-flex justify-content-center align-items-center p-5">
+                      <Spinner animation="border" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                      </Spinner>
+                      <span>&nbsp; Loading...</span>
+                    </div>
                   </TableCell>
-                </TableRow>
-              ))}
+                  <TableCell></TableCell>
+                </>
+              )}
+
+              {!isLoading && filteredRows?.length <= 0 && (
+                <>
+                <TableCell></TableCell>
+                <TableCell>
+                    <p className="d-flex justify-content-center align-items-center p-4" style={{fontWeight: "600"}}>No data found!</p>
+                </TableCell>
+                <TableCell></TableCell>
+              </>
+              )}
             </TableBody>
           </Table>
         </TableContainer>
@@ -176,8 +277,8 @@ const Department = () => {
                 id="department"
                 aria-describedby="department"
                 placeholder="Enter department"
-                onChange={(e) => setUpdateValue(e.target.value)}
-                value={updateValue}
+                onChange={(e) => setUpdateData({...updateData, value: e.target.value})}
+                value={updateData.value}
               />
             </div>
           </Modal.Body>

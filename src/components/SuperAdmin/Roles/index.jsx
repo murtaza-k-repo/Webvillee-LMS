@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import Table from "@material-ui/core/Table";
 import TableBody from "@material-ui/core/TableBody";
@@ -11,9 +11,13 @@ import SearchBar from "material-ui-search-bar";
 
 import { BiSolidPencil } from "react-icons/bi";
 import { MdDelete } from "react-icons/md";
-import { Button, Form, Modal } from "react-bootstrap";
+import { Button, Form, Modal, Spinner } from "react-bootstrap";
 import { FaPlus } from "react-icons/fa";
 import "./style.css";
+import axios from "axios";
+
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const useStyles = makeStyles({
   table: {
@@ -21,46 +25,64 @@ const useStyles = makeStyles({
   },
 });
 
-const originalRows = [
-  {
-    sno: 1,
-    role_name: "HR",
-    role_description: "Human Resources Manager",
-    department_name: "Human Resources",
-  },
-  {
-    sno: 2,
-    role_name: "ReactJs Developer",
-    role_description: "Frontend technologies developer",
-    department_name: "Development",
-  },
-  {
-    sno: 3,
-    role_name: "NodeJS Developer",
-    role_description: "Bachend technologies developer",
-    department_name: "Development",
-  },
-  {
-    sno: 4,
-    role_name: "Motion Artist",
-    role_description: "Create and design animations",
-    department_name: "Animation",
-  },
-];
-
 const Roles = () => {
-  const [rows, setRows] = useState(originalRows);
+  const [rows, setRows] = useState(null);
+  const [filteredRows, setFilteredRows] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [show, setShow] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
-  const [updateValue, setUpdateValue] = useState("");
+  const [departments, setDepartments] = useState(null);
+  const [updateData, setUpdateData] = useState({
+    id: "",
+    role_name: "",
+    role_desc: "",
+    department_name: ""
+  });
   const [searched, setSearched] = useState("");
   const classes = useStyles();
 
+  const getRoles = async () => {
+    try {
+      setIsLoading(true);
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_ENDPOINT}/getAllRoles`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        setRows(response.data.data);
+        setFilteredRows(response.data.data);
+        setIsLoading(false);
+      } else {
+        toast.error("Something went wrong!", {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+        setIsLoading(false);
+      }
+    } catch (err) {
+      toast.error("Something went wrong!", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
+      setIsLoading(false);
+    }
+  };
+
   const requestSearch = (searchedVal) => {
-    const filteredRows = originalRows.filter((row) => {
-      return row.name.toLowerCase().includes(searchedVal.toLowerCase());
-    });
-    setRows(filteredRows);
+    if (searchedVal) {
+      const filteredRowsData = rows.filter((row) => {
+        return row.department_name
+          .toLowerCase()
+          .includes(searchedVal.toLowerCase());
+      });
+
+      setFilteredRows(filteredRowsData);
+    } else {
+      setFilteredRows(rows);
+    }
   };
 
   const cancelSearch = () => {
@@ -80,8 +102,42 @@ const Roles = () => {
     console.log(event.target[0].value);
   };
 
+  const getAllDepartments = async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_ENDPOINT}/getAllDepartments`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        setDepartments(response.data.data);
+      } else {
+        toast.error("Something went wrong!", {
+            position: toast.POSITION.TOP_RIGHT
+          });
+      
+      }
+    } catch (err) {
+      console.log(err);
+      toast.error("Something went wrong!", {
+        position: toast.POSITION.TOP_RIGHT
+      });
+    }
+  };
+
+  useEffect(() => {
+
+    getAllDepartments();
+    getRoles();
+  }, []);
+
   return (
     <>
+      <ToastContainer />
       <Paper className="mt-4">
         <div className="d-flex">
           <SearchBar
@@ -89,6 +145,7 @@ const Roles = () => {
             onChange={(searchVal) => requestSearch(searchVal)}
             onCancelSearch={() => cancelSearch()}
             style={{ width: "80%" }}
+            disabled={isLoading}
           />
           <Button
             className={"addBtn"}
@@ -111,30 +168,73 @@ const Roles = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {rows.map((row) => (
-                <TableRow key={row.sno}>
-                  <TableCell component="th" scope="row">
-                    {row.sno}
-                  </TableCell>
-                  <TableCell>{row.role_name}</TableCell>
-                  <TableCell>{row.role_description}</TableCell>
-                  <TableCell>{row.department_name}</TableCell>
+              {filteredRows &&
+                filteredRows.map((row, index) => (
+                  <TableRow key={index + 1}>
+                    <TableCell component="th" scope="row">
+                      {index + 1}
+                    </TableCell>
+                    <TableCell>{row.role_name}</TableCell>
+                    <TableCell>{row.role_description}</TableCell>
+                    <TableCell>{row.department_name}</TableCell>
+                    <TableCell>
+                      <>
+                        <Button
+                          className="text-success"
+                          variant="outlined"
+                          onClick={() => {
+                            setShowUpdateModal(true);
+                            setUpdateData({
+                              id: row.id,
+                              role_name: row.role_name,
+                              role_desc: row.role_description,
+                              department_name: row.department_name
+                            });
+                          }}
+                        >
+                          <BiSolidPencil size={22} />
+                        </Button>
+                        <Button className="text-danger" variant="outlined">
+                          <MdDelete size={22} />
+                        </Button>
+                      </>
+                    </TableCell>
+                  </TableRow>
+                ))}
+
+              {isLoading && !filteredRows && (
+                <>
+                  <TableCell></TableCell>
+                  <TableCell></TableCell>
                   <TableCell>
-                    <>
-                      <Button
-                        className="text-success"
-                        variant="outlined"
-                        onClick={() => { setShowUpdateModal(true); setUpdateValue(row.name); }}
-                      >
-                        <BiSolidPencil size={22} />
-                      </Button>
-                      <Button className="text-danger" variant="outlined">
-                        <MdDelete size={22} />
-                      </Button>
-                    </>
+                    <div className="d-flex justify-content-center align-items-center p-5">
+                      <Spinner animation="border" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                      </Spinner>
+                      <span>&nbsp; Loading...</span>
+                    </div>
                   </TableCell>
-                </TableRow>
-              ))}
+                  <TableCell></TableCell>
+                  <TableCell></TableCell>
+                </>
+              )}
+
+              {!isLoading && filteredRows?.length <= 0 && (
+                <>
+                  <TableCell></TableCell>
+                  <TableCell></TableCell>
+                  <TableCell>
+                    <p
+                      className="d-flex justify-content-center align-items-center p-4"
+                      style={{ fontWeight: "600" }}
+                    >
+                      No data found!
+                    </p>
+                  </TableCell>
+                  <TableCell></TableCell>
+                  <TableCell></TableCell>
+                </>
+              )}
             </TableBody>
           </Table>
         </TableContainer>
@@ -146,16 +246,22 @@ const Roles = () => {
         </Modal.Header>
         <Form onSubmit={handleSubmit}>
           <Modal.Body>
-          <div class="form-group">
-            <select class="form-control mb-2" id="exampleFormControlSelect1" required>
-              <option disabled selected>Select department</option>
-              <option>HR</option>
-              <option>Development</option>
-              <option>SalesForce</option>
-              <option>Animation</option>
-              <option>Sales</option>
-            </select>
-          </div>
+            <div class="form-group">
+              <select
+                class="form-control mb-2"
+                id="exampleFormControlSelect1"
+                required
+              >
+                <option disabled selected>
+                  Select department
+                </option>
+                {departments && departments?.map(department =>{
+                  return (
+                    <option value={department.department_name}>{department.name}</option>
+                  )
+                })}
+              </select>
+            </div>
             <div class="form-group mb-2">
               <input
                 type="text"
@@ -194,14 +300,45 @@ const Roles = () => {
         </Modal.Header>
         <Form onSubmit={handleUpdate}>
           <Modal.Body>
-            <div class="form-group">
+          <div class="form-group">
+              <select
+                class="form-control mb-2"
+                id="exampleFormControlSelect1"
+                required
+                value={updateData.department_name}
+              >
+                <option disabled selected>
+                  Select department
+                </option>
+                {departments && departments?.map(department =>{
+                  return (
+                    <option value={department.department_name}>{department.name}</option>
+                  )
+                })}
+              </select>
+            </div>
+            <div class="form-group mb-2">
               <input
                 type="text"
                 class="form-control"
-                id="department"
-                aria-describedby="department"
-                placeholder="Enter department"
-                value={updateValue}
+                id="role"
+                aria-describedby="role"
+                placeholder="Enter role"
+                required
+                value={updateData.role_name}
+                onChange={e => setUpdateData({...updateData, role_name: e.target.value})}
+              />
+            </div>
+            <div class="form-group mb-2">
+              <textarea
+                rows={2}
+                class="form-control"
+                id="description"
+                aria-describedby="description"
+                placeholder="Enter description"
+                required
+                value={updateData.role_desc}
+                onChange={e => setUpdateData({...updateData, role_desc: e.target.value})}
               />
             </div>
           </Modal.Body>
